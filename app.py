@@ -8,12 +8,16 @@ import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
+
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 from flask_migrate import Migrate
 import sys
+import utility
+from datetime import datetime
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -47,8 +51,24 @@ class Venue(db.Model):
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
     shows = db.relationship("Show", backref ="venue",lazy=True)
+    website = db.Column(db.String(120))
     genres = db.Column(db.String(120))
+    seeking_talent = db.Column(db.Boolean)
+    seeking_description = db.Column(db.String())
+    @hybrid_property
+    def upcoming_shows(self):
+      return Show.query.filter(Show.start_time >= datetime.now()).filter(Show.venue_id==self.id)
+    @hybrid_property
+    def upcoming_shows_count(self):
+      return Show.query.filter(Show.start_time >= datetime.now()).filter(Show.venue_id==self.id).count()
+    @hybrid_property
+    def past_shows(self):
+      return Show.query.filter(Show.start_time < datetime.now()).filter(Show.venue_id==self.id)
+    @hybrid_property
+    def past_shows_count(self):
+      return Show.query.filter(Show.start_time < datetime.now()).filter(Show.venue_id==self.id).count()
 
+    
 class Artist(db.Model):
     __tablename__ = 'Artist'
 
@@ -124,7 +144,7 @@ def venues():
       "num_upcoming_shows": 0,
     }]
   }]
-  return render_template('pages/venues.html', areas=data);
+  return render_template('pages/venues.html', areas=data)
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
@@ -145,46 +165,7 @@ def search_venues():
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-  data1={
-    "id": 1,
-    "name": "The Musical Hop",
-    "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-    "address": "1015 Folsom Street",
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "123-123-1234",
-    "website": "https://www.themusicalhop.com",
-    "facebook_link": "https://www.facebook.com/TheMusicalHop",
-    "seeking_talent": True,
-    "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-    "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
-    "past_shows": [{
-      "artist_id": 4,
-      "artist_name": "Guns N Petals",
-      "artist_image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80",
-      "start_time": "2019-05-21T21:30:00.000Z"
-    }],
-    "upcoming_shows": [],
-    "past_shows_count": 1,
-    "upcoming_shows_count": 0,
-  }
-  data2={
-    "id": 2,
-    "name": "The Dueling Pianos Bar",
-    "genres": ["Classical", "R&B", "Hip-Hop"],
-    "address": "335 Delancey Street",
-    "city": "New York",
-    "state": "NY",
-    "phone": "914-003-1132",
-    "website": "https://www.theduelingpianos.com",
-    "facebook_link": "https://www.facebook.com/theduelingpianos",
-    "seeking_talent": False,
-    "image_link": "https://images.unsplash.com/photo-1497032205916-ac775f0649ae?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=750&q=80",
-    "past_shows": [],
-    "upcoming_shows": [],
-    "past_shows_count": 0,
-    "upcoming_shows_count": 0,
-  }
+  
   data3={
     "id": 3,
     "name": "Park Square Live Music & Coffee",
@@ -222,7 +203,8 @@ def show_venue(venue_id):
     "past_shows_count": 1,
     "upcoming_shows_count": 1,
   }
-  data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
+  #data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
+  data = Venue.query.get(venue_id)
   return render_template('pages/show_venue.html', venue=data)
 
 #  Create Venue
@@ -237,15 +219,36 @@ def create_venue_form():
 def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
+  error = False
+  form = VenueForm()
   try:
-    print(request.form)
-    d = dict(request.form)
-    print(d)
-    flash('Venue ' + request.form['name'] + ' was successfully listed!')
-  except:    
-    print(sys.exc_info())
-    flash('Error: Venue was not added!')
+    # TODO: make validation fails due to csrf token
+    # if not form.validate_on_submit():
+    #   print(form.phone.data)
+    #   raise ValueError("form is invalid")
 
+
+    genres = request.form.getlist('genres')
+    # txtGenres=""
+    # for i,genre in enumerate(genres):
+    #   txtGenres += genre
+    #   if i != len(genres) -1:
+    #     txtGenres+=","     
+    # print(txtGenres)
+    data = dict(request.form)
+    data['genres'] = utility.join_array(genres)
+    venue = Venue(**data)
+    db.session.add(venue)
+    db.session.commit()
+    flash('Venue ' + request.form['name'] + ' was successfully listed!')
+    
+  except:
+    db.session.rollback()
+    error = sys.exc_info()
+    print(error)
+    flash('Error: Venue was not added!')
+  finally:
+    db.session.close()
    # on successful db insert, flash success
 
   # TODO: on unsuccessful db insert, flash an error instead.
@@ -441,7 +444,19 @@ def create_artist_submission():
   # TODO: modify data to be the data object returned from db insertion
 
   # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
+  try:
+    data = dict(request.form)
+    data['genres'] = utility.join_array(request.form.getlist('genres'))
+    artist = Artist(**data)
+    db.session.add(artist)
+    db.session.commit()
+    flash('Artist ' + request.form['name'] + ' was successfully listed!')
+  except:
+    db.session.rollback()
+    print(sys.exc_info())
+    flash('Error Occured while adding the Artist')
+  finally:
+    db.session.close()
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
   return render_template('pages/home.html')
@@ -497,15 +512,26 @@ def shows():
 def create_shows():
   # renders form. do not touch.
   form = ShowForm()
+  
   return render_template('forms/new_show.html', form=form)
 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
   # called to create new shows in the db, upon submitting new show listing form
   # TODO: insert form data as a new Show record in the db, instead
-
+  try:
+    data = dict(request.form)
+    show = Show(**data)
+    db.session.add(show)
+    db.session.commit()
+    flash('Show was successfully listed!')
+  except:
+    db.session.rollback()
+    flash('Error: last show was not added!')
+  finally:
+    db.session.close()
   # on successful db insert, flash success
-  flash('Show was successfully listed!')
+  
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Show could not be listed.')
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/

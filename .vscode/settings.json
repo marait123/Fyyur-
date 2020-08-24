@@ -1,3 +1,15 @@
 {
-    "python.pythonPath": "C:\\Users\\mohammed\\AppData\\Local\\Programs\\Python\\Python38\\python.exe"
+    "python.pythonPath": "C:\\Users\\mohammed\\AppData\\Local\\Programs\\Python\\Python38\\python.exe",
+    "sqltools.connections": [
+        {
+            "database": "fyyer",
+            "driver": "PostgreSQL",
+            "name": "postgres",
+            "password": "123456",
+            "port": 5432,
+            "previewLimit": 50,
+            "server": "localhost",
+            "username": "postgres"
+        }
+    ]
 }
