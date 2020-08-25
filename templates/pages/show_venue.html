@@ -74,6 +74,35 @@
 		{% endfor %}
 	</div>
 </section>
-
+<section>
+<form id="frmDelete" class="form"  action="/venues/{{venue.id}}/edit">
+	<div class="form-group">
+		<label for="formGroupExampleInput">Delete Venue</label>
+		<input type="submit" class="btn btn-danger form-control" id="formGroupExampleInput" value="Delete">
+	</div>
+</form>
+</section>
+<script>
+	document.getElementById("frmDelete").onsubmit = function(e){
+		e.preventDefault()
+		fetch('/venues/{{venue.id}}', {
+                    method: 'DELETE', // or 'PUT'
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({}),
+                    })
+					.then(response => response.json())
+					.then(response => {
+						if(response.status >= 300)
+							alert(response.error)
+						else
+							window.location.replace(response.url);
+					})                    
+                    .catch((error) => {
+						alert(error)
+                    });
+	}
+</script>
 {% endblock %}
 
