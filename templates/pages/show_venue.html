@@ -1,6 +1,19 @@
 {% extends 'layouts/main.html' %}
 {% block title %}Venue Search{% endblock %}
 {% block content %}
+<div class="form-group">
+	<label for="formGroupExampleInput">Edit Venue: </label>
+	<a href="/venues/{{venue.id}}/edit" class="btn btn-danger">Edit</a>
+</div>
+<section>
+	<form id="frmDelete" class="form"  action="/venues/{{venue.id}}/edit">
+		<div class="form-group">
+			<label for="formGroupExampleInput">Delete Venue: </label>
+			<input type="submit" class="btn btn-danger" id="formGroupExampleInput" value="Delete">
+		</div>
+	</form>
+	
+	</section>
 <div class="row">
 	<div class="col-sm-6">
 		<h1 class="monospace">
@@ -74,14 +87,7 @@
 		{% endfor %}
 	</div>
 </section>
-<section>
-<form id="frmDelete" class="form"  action="/venues/{{venue.id}}/edit">
-	<div class="form-group">
-		<label for="formGroupExampleInput">Delete Venue</label>
-		<input type="submit" class="btn btn-danger form-control" id="formGroupExampleInput" value="Delete">
-	</div>
-</form>
-</section>
+
 <script>
 	document.getElementById("frmDelete").onsubmit = function(e){
 		e.preventDefault()

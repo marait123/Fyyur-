@@ -1,6 +1,10 @@
 {% extends 'layouts/main.html' %}
 {% block title %}{{ artist.name }} | Artist{% endblock %}
 {% block content %}
+<div class="form-group">
+	<label for="formGroupExampleInput">Edit Venue</label>
+	<a href="/artists/{{artist.id}}/edit" class="btn">Edit</a>
+</div>
 <div class="row">
 	<div class="col-sm-6">
 		<h1 class="monospace">
